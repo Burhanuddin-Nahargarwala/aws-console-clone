@@ -173,6 +173,560 @@ If more than ~20 concurrent learners:
 
 ---
 
+## Learning Modes
+
+### The Two-Mode System
+
+When a learner opens the simulator for the first time, a full-screen mode selection appears — no login, no friction, just a choice:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                                                                     │
+│              Welcome to the AWS Learning Simulator                  │
+│                                                                     │
+│   ┌───────────────────────────┐  ┌───────────────────────────────┐  │
+│   │                           │  │                               │  │
+│   │   🔍  Sandbox             │  │   🎓  Learning Path           │  │
+│   │                           │  │                               │  │
+│   │  Explore AWS services     │  │  New to AWS? Start here.      │  │
+│   │  freely at your own pace. │  │  Step-by-step guidance        │  │
+│   │  No guidance or tasks.    │  │  through every service with   │  │
+│   │                           │  │  hands-on tasks, CLI, and     │  │
+│   │  Best for:                │  │  Python exercises.            │  │
+│   │  • Already know AWS       │  │                               │  │
+│   │  • Want to experiment     │  │  Best for:                    │  │
+│   │  • Building something     │  │  • Complete beginners         │  │
+│   │                           │  │  • Structured learners        │  │
+│   │   [ Enter Sandbox ]       │  │  • Exam preparation           │  │
+│   │                           │  │                               │  │
+│   │                           │  │   [ Start Learning Path ]     │  │
+│   │                           │  │                               │  │
+│   └───────────────────────────┘  └───────────────────────────────┘  │
+│                                                                     │
+│   You can switch modes at any time from the top navigation bar.     │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+The choice is saved in `localStorage`. The learner can switch at any time from the navbar.
+
+---
+
+### Sandbox Mode
+
+Exactly what it sounds like — the full AWS console with no changes. No side panels, no tasks, no validation. Learner has complete freedom to explore, create, break things, and experiment.
+
+Suitable for someone who already has AWS context and just wants a free environment to practice.
+
+---
+
+### Learning Path Mode
+
+This is the core educational product. A structured curriculum sits alongside the AWS console and guides learners from zero to confident.
+
+#### What the UI Looks Like in Learning Path Mode
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  [AWS Navbar — unchanged]                                        │
+├──────────────────────────────────────────────────────────────────┤
+│                                          │                       │
+│   [AWS Console — full, interactive]      │  Learning Panel       │
+│                                          │  ────────────────     │
+│   The console is fully functional.       │  Module 3: S3         │
+│   Learner uses it as normal, but         │  Lesson 2 of 7        │
+│   guided steps appear in the right       │  ████████░░░░  60%    │
+│   panel telling them what to do.         │                       │
+│                                          │  📘 Create a bucket   │
+│   When a step is completed, the          │                       │
+│   panel advances automatically.          │  In S3, a bucket is   │
+│                                          │  your top-level       │
+│                                          │  container. Think of  │
+│                                          │  it like a hard drive │
+│                                          │  in the cloud.        │
+│                                          │                       │
+│                                          │  Your task:           │
+│                                          │  Click "Create bucket"│
+│                                          │  and name it:         │
+│                                          │  my-first-bucket      │
+│                                          │                       │
+│                                          │  💡 Hint              │
+│                                          │  [ Check my work ]    │
+│                                          │                       │
+│                                          │  ← Previous  Next →   │
+└──────────────────────────────────────────┴───────────────────────┘
+```
+
+The console on the left is not locked or restricted. Learner interacts normally — the panel on the right guides them. When they complete a step (e.g., bucket is created), the panel detects it and automatically advances.
+
+---
+
+### Curriculum Structure
+
+The curriculum is defined as a JSON data file — easy to extend as we add services.
+
+```js
+// src/curriculum/index.js
+export const curriculum = [
+  {
+    id: 'intro',
+    title: 'Introduction to AWS',
+    icon: 'AWS',
+    lessons: [
+      {
+        id: 'what-is-cloud',
+        title: 'What is Cloud Computing?',
+        type: 'theory',
+        content: `...markdown content...`,
+      },
+      {
+        id: 'aws-console-tour',
+        title: 'Navigating the Console',
+        type: 'guided',
+        steps: [
+          {
+            instruction: 'Click the Services grid icon (⊞) in the top navbar to see all AWS services.',
+            highlight: '.aws-navbar-btn[title="All services"]',  // CSS selector to pulse-highlight
+            validate: null,  // navigation steps don't need validation
+          },
+          {
+            instruction: 'Click on "S3" in the favorites bar at the top.',
+            highlight: '.aws-fav-bar-item',
+            validate: () => window.location.pathname === '/s3',
+          },
+        ],
+      },
+    ],
+  },
+
+  {
+    id: 's3',
+    title: 'Amazon S3',
+    icon: 'S3',
+    lessons: [
+      {
+        id: 's3-intro',
+        title: 'What is Amazon S3?',
+        type: 'theory',
+        content: `...`,
+      },
+      {
+        id: 's3-create-bucket-guided',
+        title: 'Create Your First Bucket',
+        type: 'guided',
+        steps: [
+          {
+            instruction: 'Navigate to S3 using the sidebar or favorites bar.',
+            validate: () => window.location.pathname.startsWith('/s3'),
+          },
+          {
+            instruction: 'Click the orange "Create bucket" button in the top right.',
+            highlight: 'button.aws-btn-primary',
+            validate: () => window.location.pathname === '/s3/bucket/create',
+          },
+          {
+            instruction: 'Enter the bucket name: `my-first-bucket`. Bucket names must be globally unique, lowercase, and 3–63 characters.',
+            validate: async () => {
+              const data = await s3Client.send(new ListBucketsCommand({}));
+              return data.Buckets?.some(b => b.Name === 'my-first-bucket');
+            },
+          },
+        ],
+      },
+      {
+        id: 's3-upload-guided',
+        title: 'Upload Your First File',
+        type: 'guided',
+        steps: [ /* ... */ ],
+      },
+      {
+        id: 's3-folders-guided',
+        title: 'Organize with Folders',
+        type: 'guided',
+        steps: [ /* ... */ ],
+      },
+      {
+        id: 's3-challenge',
+        title: 'Challenge: Build a File Archive',
+        type: 'task',
+        description: `
+          Without any guidance, complete the following:
+          1. Create a bucket named: photo-archive-[your-name]
+          2. Create two folders: "2025" and "2026"
+          3. Upload at least one file into each folder
+          4. Copy the S3 URI of one of the uploaded files
+        `,
+        validate: async () => { /* checks all 4 conditions */ },
+        successMessage: 'Great work! You now know how to organize files in S3.',
+      },
+      {
+        id: 's3-cli',
+        title: 'S3 with AWS CLI',
+        type: 'cli',
+        steps: [
+          {
+            instruction: 'The terminal below is pre-configured to connect to our simulator. List your buckets:',
+            command: 'aws s3 ls',
+            expectedOutputContains: 'my-first-bucket',
+          },
+          {
+            instruction: 'Create a new bucket using the CLI:',
+            command: 'aws s3 mb s3://cli-created-bucket',
+            expectedOutputContains: 'make_bucket: cli-created-bucket',
+          },
+          {
+            instruction: 'Upload a file. First create a test file, then upload it:',
+            command: 'echo "Hello from CLI" > test.txt && aws s3 cp test.txt s3://cli-created-bucket/',
+            expectedOutputContains: 'upload:',
+          },
+          {
+            instruction: 'List objects in your bucket:',
+            command: 'aws s3 ls s3://cli-created-bucket/',
+            expectedOutputContains: 'test.txt',
+          },
+          {
+            instruction: 'On real AWS, the only difference is removing --endpoint-url:',
+            note: true,
+            content: `
+              Simulator:  aws s3 ls   (endpoint pre-configured)
+              Real AWS:   aws s3 ls   (identical — no changes needed!)
+            `,
+          },
+        ],
+      },
+      {
+        id: 's3-python',
+        title: 'S3 with Python (boto3)',
+        type: 'python',
+        steps: [
+          {
+            instruction: 'Run this code to list your buckets using Python:',
+            code: `
+import boto3
+
+s3 = boto3.client(
+    's3',
+    endpoint_url='http://localhost:4566',  # Points to our simulator
+    aws_access_key_id='test',
+    aws_secret_access_key='test',
+    region_name='ap-south-1'
+)
+
+response = s3.list_buckets()
+for bucket in response['Buckets']:
+    print(f"Bucket: {bucket['Name']}")
+            `,
+            validateOutput: (output) => output.includes('my-first-bucket'),
+          },
+          {
+            instruction: 'Now create a bucket and upload a file programmatically:',
+            code: `
+import boto3
+
+s3 = boto3.client('s3', endpoint_url='http://localhost:4566',
+                  aws_access_key_id='test', aws_secret_access_key='test',
+                  region_name='ap-south-1')
+
+# Create bucket
+s3.create_bucket(Bucket='python-created-bucket')
+print("Bucket created!")
+
+# Upload a file
+s3.put_object(
+    Bucket='python-created-bucket',
+    Key='hello.txt',
+    Body=b'Hello from Python!'
+)
+print("File uploaded!")
+
+# List objects
+response = s3.list_objects_v2(Bucket='python-created-bucket')
+for obj in response.get('Contents', []):
+    print(f"Object: {obj['Key']} ({obj['Size']} bytes)")
+            `,
+          },
+          {
+            instruction: 'Moving to real AWS: just remove the endpoint_url line.',
+            note: true,
+            content: `
+              # Simulator version:
+              s3 = boto3.client('s3', endpoint_url='http://your-server:4566', ...)
+              
+              # Real AWS version:
+              s3 = boto3.client('s3')  # That's it!
+            `,
+          },
+        ],
+      },
+    ],
+  },
+  // ... more modules for Lambda, EC2, DynamoDB, etc.
+];
+```
+
+---
+
+### Lesson Types
+
+| Type | Description | Components Used |
+|---|---|---|
+| `theory` | Reading content — what is this service, key concepts | Markdown renderer, diagrams |
+| `guided` | Step-by-step with console highlighting | Learning panel + UI highlighter |
+| `task` | Unguided challenge — learner does it alone, validation checks answer | Learning panel + Check button |
+| `cli` | Terminal session with command guidance | xterm.js embedded terminal |
+| `python` | Python code editor with runnable exercises | Monaco editor + backend runner |
+
+---
+
+### Learning Panel Component
+
+The right-side panel that appears in Learning Path mode:
+
+```
+Learning Panel states:
+  theory  → Rendered markdown with "Next →" button
+  guided  → Current step instruction + optional hint + auto-advance on validation
+  task    → Task description + "Check my work" button + success/fail feedback
+  cli     → Instruction + command to copy + "Check output" validator
+  python  → Instruction + Monaco code editor + "Run" button + output panel
+```
+
+**Auto-advance behavior (guided steps):**
+- After each action (bucket created, file uploaded), the panel polls the validation function every 2 seconds
+- When validation passes: green flash on the step, auto-advance to next step
+- Learner doesn't have to click anything — the panel tracks their progress naturally
+
+**UI highlighting:**
+- `highlight` field on a step contains a CSS selector
+- The element matching that selector gets a pulsing orange ring (like a product tour)
+- Draws the learner's eye to where they need to click
+
+---
+
+### Embedded Terminal (CLI Mode)
+
+For CLI lessons, an xterm.js terminal appears in the learning panel (or full-screen):
+
+```
+┌──────────────────────────────────────────────────────┐
+│  AWS CLI Terminal                          [⛶ Full]  │
+├──────────────────────────────────────────────────────┤
+│  $ aws s3 ls                                         │
+│  2026-05-17 10:23:45 my-first-bucket                 │
+│  2026-05-17 10:25:12 python-created-bucket           │
+│  $                                                   │
+│                                                      │
+└──────────────────────────────────────────────────────┘
+```
+
+**Pre-configured environment:**
+The terminal shell has these env vars set automatically so learners type clean `aws` commands — no `--endpoint-url` required:
+
+```bash
+export AWS_DEFAULT_REGION=ap-south-1
+export AWS_ACCESS_KEY_ID=test
+export AWS_SECRET_ACCESS_KEY=test
+export AWS_ENDPOINT_URL=http://localhost:4566   # AWS CLI v2 respects this env var
+```
+
+With `AWS_ENDPOINT_URL` set, `aws s3 ls` works exactly like real AWS from the learner's perspective. When they move to real AWS, they just don't set that env var. Same commands.
+
+**Backend:** xterm.js WebSocket → backend → `docker exec` into a pre-built `aws-cli-sandbox` container with Python, boto3, AWS CLI, and common tools pre-installed.
+
+---
+
+### Embedded Python Editor (Python Mode)
+
+For Python lessons, a Monaco editor appears with runnable code:
+
+```
+┌──────────────────────────────────────────────────────┐
+│  Python Editor                            [ ▶ Run ]  │
+├──────────────────────────────────────────────────────┤
+│  import boto3                                        │
+│                                                      │
+│  s3 = boto3.client(                                  │
+│      's3',                                           │
+│      endpoint_url='http://localhost:4566',           │
+│      ...                                             │
+│  )                                                   │
+│                                                      │
+│  response = s3.list_buckets()                        │
+│  print(response['Buckets'])                          │
+├──────────────────────────────────────────────────────┤
+│  Output:                                             │
+│  [{'Name': 'my-first-bucket', 'CreationDate': ...}]  │
+│  ✅ Correct! my-first-bucket is listed.              │
+└──────────────────────────────────────────────────────┘
+```
+
+**Execution:** Code is sent to our backend Python sandbox (same one used for Lambda). Output is streamed back. Validation checks the output or the Floci state.
+
+---
+
+### Progress Tracking
+
+Stored in `localStorage` — no server, no login needed.
+
+```js
+// localStorage key: 'aws-simulator-progress'
+{
+  "mode": "learning",
+  "completedLessons": ["intro/what-is-cloud", "intro/aws-console-tour", "s3/s3-intro"],
+  "currentLesson": "s3/s3-create-bucket-guided",
+  "currentStep": 2,
+  "lastSeen": "2026-05-18T10:30:00Z"
+}
+```
+
+**Progress bar in navbar (Learning Path mode):**
+```
+🎓 Learning Path  [████████░░░░░░░]  8 / 42 lessons
+```
+
+**Left sidebar replacement (Learning Path mode):**
+Instead of the AWS service sidebar, a curriculum tree shows module progress:
+
+```
+📋 Your Progress
+  ✅ Introduction to AWS
+  ⏳ Amazon S3  (lesson 3 of 7)
+     ✅ What is S3?
+     ✅ Create your first bucket
+     ▶  Upload a file  ← current
+     ○  Create folders
+     ○  Challenge
+     ○  S3 with CLI
+     ○  S3 with Python
+  ○ Amazon Lambda
+  ○ Amazon EC2
+  ○ Amazon DynamoDB
+  ...
+```
+
+---
+
+### Full Curriculum Outline
+
+#### Module 0: Introduction to AWS (no service needed)
+- What is cloud computing and why AWS?
+- AWS global infrastructure (regions, AZs, edge locations)
+- The AWS Console — navigation, search, favorites, regions
+- AWS pricing model — pay-as-you-go (and why this simulator exists)
+- Setting up the AWS CLI (pre-configured here, manual setup for real AWS)
+
+#### Module 1: Amazon S3
+- What is object storage? S3 concepts (buckets, objects, keys, prefixes)
+- **Guided:** Create a bucket → upload files → create folders → download
+- **Task:** Build a folder structure for a photo archive
+- **CLI:** `aws s3 mb`, `aws s3 cp`, `aws s3 ls`, `aws s3 rm`, `aws s3 sync`
+- **Python:** `create_bucket`, `put_object`, `get_object`, `list_objects_v2`, `delete_object`
+
+#### Module 2: Amazon DynamoDB
+- What is NoSQL? DynamoDB concepts (tables, items, partition key, sort key)
+- **Guided:** Create a table → add items → query → scan
+- **Task:** Design and populate a user activity table
+- **CLI:** `aws dynamodb create-table`, `put-item`, `get-item`, `query`, `scan`
+- **Python:** `create_table`, `put_item`, `get_item`, `query`, `scan`, `update_item`
+
+#### Module 3: AWS Lambda
+- What is serverless? Lambda concepts (functions, triggers, runtime, handler)
+- **Guided:** Write a function → test with event → read logs
+- **Task:** Write a function that processes an S3 event
+- **CLI:** `aws lambda create-function`, `invoke`, `update-function-code`
+- **Python:** `create_function`, `invoke`, `update_function_code`
+
+#### Module 4: Amazon EC2
+- What is compute? EC2 concepts (instances, AMIs, instance types, key pairs, security groups)
+- **Guided:** Launch an instance → download PEM → connect via browser terminal
+- **Guided:** Install nginx inside the instance → verify it's running
+- **Task:** Launch, configure, and connect to your own Linux server
+- **CLI:** `aws ec2 run-instances`, `describe-instances`, `start-instances`, `terminate-instances`
+- **Python:** `run_instances`, `describe_instances`, `terminate_instances`
+
+#### Module 5: AWS IAM
+- What is IAM? Concepts (users, groups, roles, policies, least-privilege)
+- **Guided:** Create a user → deny all S3 access → test the denial → add policy → test success
+- **Guided:** Create a role → attach to Lambda → test cross-service access
+- **Task:** Set up a team of 3 users with different S3 permissions
+- **CLI:** `aws iam create-user`, `put-user-policy`, `attach-user-policy`
+- **Python:** `create_user`, `put_user_policy`, `create_role`, `attach_role_policy`
+
+#### Module 6: SQS + SNS
+- Messaging concepts: queues vs topics, pub-sub, fan-out
+- **Guided:** Create SQS queue → send messages → receive messages → trigger Lambda
+- **Guided:** Create SNS topic → subscribe SQS → publish → watch messages arrive
+- **Task:** Build a notification pipeline: SNS → SQS → Lambda processor
+- **CLI + Python** for both services
+
+#### Module 7: AWS API Gateway
+- What is an API Gateway? REST vs HTTP APIs, routes, integrations, stages
+- **Guided:** Create HTTP API → add Lambda integration → deploy → test with curl
+- **Task:** Build a simple CRUD API backed by Lambda + DynamoDB
+- **CLI + Python**
+
+#### Module 8: ECS + ECR
+- Containers vs VMs, Docker basics, task definitions, services, clusters
+- **Guided:** Build a Docker image → push to ECR → create task definition → run as ECS service
+- **Task:** Deploy a web application container to ECS
+
+#### Module 9: CloudWatch
+- Observability: logs, metrics, alarms
+- **Guided:** View Lambda logs → create a metric filter → set up an alarm
+- **Task:** Set up monitoring for an S3 + Lambda pipeline
+
+#### Module 10: Step Functions
+- Workflow orchestration: state machines, states, transitions, error handling
+- **Guided:** Create a state machine → run it → watch each state progress
+- **Task:** Build a multi-step data processing workflow
+
+#### Module 11: Advanced — Putting It All Together
+- **Capstone Lab 1:** Serverless image processor (S3 upload → Lambda → DynamoDB → SNS notification)
+- **Capstone Lab 2:** REST API backend (API Gateway → Lambda → DynamoDB → IAM roles)
+- **Capstone Lab 3:** CI/CD pipeline simulation (CodeBuild → ECR → ECS deploy)
+
+---
+
+### Technical Components to Build
+
+| Component | File | Description |
+|---|---|---|
+| Mode selection screen | `src/pages/ModeSelect.jsx` | Full-screen choice on first load |
+| Curriculum data | `src/curriculum/index.js` | All modules, lessons, steps as JSON |
+| Learning panel | `src/components/learn/LearningPanel.jsx` | Right-side guided panel |
+| Progress tracker | `src/components/learn/ProgressSidebar.jsx` | Left curriculum tree |
+| UI highlighter | `src/components/learn/StepHighlight.jsx` | CSS pulse ring on elements |
+| Step validator | `src/hooks/useStepValidator.js` | Polls validation function, auto-advances |
+| Embedded terminal | `src/components/learn/CliTerminal.jsx` | xterm.js + WebSocket |
+| Python editor | `src/components/learn/PythonEditor.jsx` | Monaco + run button + output |
+| Progress store | `src/hooks/useProgress.js` | localStorage read/write |
+| Lesson renderer | `src/components/learn/LessonRenderer.jsx` | Routes to correct lesson type |
+
+---
+
+### Learning Path Checklist
+- [ ] Mode selection screen (Sandbox vs Learning Path)
+- [ ] Learning panel component (right side, collapsible)
+- [ ] Curriculum data structure (`curriculum/index.js`)
+- [ ] Theory lesson renderer (markdown)
+- [ ] Guided lesson renderer (steps + highlight + auto-validate)
+- [ ] Task lesson renderer (description + check button + feedback)
+- [ ] CLI lesson renderer (terminal + command guide)
+- [ ] Python lesson renderer (Monaco editor + run + output)
+- [ ] UI element highlighter (pulsing orange ring)
+- [ ] Step auto-advance on validation pass
+- [ ] Progress tracking in localStorage
+- [ ] Progress sidebar (curriculum tree with completion status)
+- [ ] Progress bar in navbar
+- [ ] Hint system (hidden, revealed on click)
+- [ ] Embedded terminal pre-configured with Floci env vars
+- [ ] Embedded Python editor with backend execution
+- [ ] Curriculum: Module 0 (Introduction)
+- [ ] Curriculum: Module 1 (S3 — all 7 lessons)
+- [ ] Curriculum: Modules 2–11 (one per service)
+
+---
+
 ## IAM — Realistic Permission Enforcement
 
 Floci's IAM API is running but doesn't enforce policies — every call succeeds regardless of permissions. We add our own enforcement layer to teach one of AWS's most important concepts.
