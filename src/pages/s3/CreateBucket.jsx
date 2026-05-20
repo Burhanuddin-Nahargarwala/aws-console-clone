@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CreateBucketCommand } from '@aws-sdk/client-s3';
 import { Info, X, Plus, Trash2 } from 'lucide-react';
-import { s3Client } from '../../aws-client';
+import { getS3Client } from '../../aws-client';
+import { useRegion } from '../../lib/RegionContext';
 
 const REGIONS = [
   { value: 'us-east-1', label: 'US East (N. Virginia) us-east-1' },
@@ -28,9 +29,10 @@ function SectionHeader({ children, infoText }) {
 
 export default function CreateBucket() {
   const navigate = useNavigate();
+  const { region: globalRegion } = useRegion();
 
   // ── General config ──────────────────────────────────────────────────────
-  const [region, setRegion] = useState('ap-south-1');
+  const [region, setRegion] = useState(globalRegion);
   const [bucketType, setBucketType] = useState('general');
   const [namespace, setNamespace] = useState('global');
   const [bucketName, setBucketName] = useState('');
@@ -105,7 +107,7 @@ export default function CreateBucket() {
       if (region !== 'us-east-1') {
         params.CreateBucketConfiguration = { LocationConstraint: region };
       }
-      await s3Client.send(new CreateBucketCommand(params));
+      await getS3Client(region).send(new CreateBucketCommand(params));
       navigate('/s3');
     } catch (err) {
       console.error(err);

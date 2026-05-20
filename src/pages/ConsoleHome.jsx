@@ -51,11 +51,12 @@ export default function ConsoleHome() {
                 { name: 'EC2', path: '/' },
                 { name: 'Athena', path: '/' },
                 { name: 'Beanstalk', path: '/', label: 'Elastic Beanstalk' },
-                { name: 'Lambda', path: '/' },
+                { name: 'Lambda', path: '/lambda' },
                 { name: 'Route53', path: '/', label: 'Route 53' },
                 { name: 'IAM', path: '/' },
                 { name: 'VPC', path: '/' },
                 { name: 'ECS', path: '/', label: 'Elastic Container Service' },
+                { name: 'DynamoDB', path: '/dynamodb' },
               ].map(svc => (
                 <Link key={svc.name} to={svc.path}
                   style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', textDecoration: 'none', borderBottom: '1px solid var(--aws-border)', fontSize: 13 }}
@@ -202,7 +203,7 @@ export default function ConsoleHome() {
                 { name: 'EC2',  label: 'Launch a virtual machine' },
                 { name: 'S3',   label: 'Store files with Amazon S3', path: '/s3' },
                 { name: 'RDS',  label: 'Launch a database' },
-                { name: 'Lambda', label: 'Build a serverless function' },
+                { name: 'Lambda', label: 'Build a serverless function', path: '/lambda' },
               ].map(item => (
                 <Link key={item.label} to={item.path || '/'} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px', borderRadius: 6, border: '1px solid var(--aws-border)', textDecoration: 'none' }}>
                   <AwsServiceIcon service={item.name} size={26}/>

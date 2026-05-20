@@ -1,0 +1,13 @@
+{
+  "functionName": "test-func-python",
+  "runtime": "python3.11",
+  "handler": "lambda_function.lambda_handler",
+  "description": "",
+  "timeout": 3,
+  "memorySize": 128,
+  "envVars": {},
+  "code": "import json\n\ndef lambda_handler(event, context):\n    print(f\"Event: {json.dumps(event)}\")\n\n    return {\n        'statusCode': 200,\n        'body': json.dumps('Hello from Lambda!')\n    }",
+  "region": "us-east-1",
+  "createdAt": "2026-05-18T08:18:02.000Z",
+  "lastModified": "2026-05-18T08:18:02.000Z"
+}

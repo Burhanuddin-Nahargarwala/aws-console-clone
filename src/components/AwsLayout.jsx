@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Search, Bell, HelpCircle, ChevronDown, ChevronRight, X, Terminal } from 'lucide-react';
 import { AwsServiceIcon } from './ServiceIcons';
+import { useRegion } from '../lib/RegionContext';
 
 /* ── AWS Logo — white "aws" + orange swoosh arrow (navbar version) ── */
 function AwsLogoSvg() {
@@ -186,15 +187,135 @@ function S3Sidebar({ pathname }) {
   );
 }
 
+/* ── CloudWatch Sidebar ────────────────────────────────────────────── */
+const CW_NAV = [
+  {
+    label: 'Dashboards',
+    items: [
+      { label: 'Dashboards', path: '/cloudwatch/dashboards' },
+    ],
+  },
+  {
+    label: 'Alarms',
+    items: [
+      { label: 'All alarms', path: '/cloudwatch/alarms' },
+      { label: 'In alarm', path: '/cloudwatch/alarms/in-alarm' },
+    ],
+  },
+  {
+    label: 'Logs',
+    items: [
+      { label: 'Log groups', path: '/cloudwatch/logs' },
+      { label: 'Log Insights', path: '/cloudwatch/logs/insights' },
+      { label: 'Live Tail', path: '/cloudwatch/logs/live-tail' },
+    ],
+  },
+  {
+    label: 'Metrics',
+    items: [
+      { label: 'All metrics', path: '/cloudwatch/metrics' },
+    ],
+  },
+];
+
+function CloudWatchSidebar({ pathname }) {
+  const [collapsed, setCollapsed] = useState({});
+  const toggle = (label) => setCollapsed(prev => ({ ...prev, [label]: !prev[label] }));
+
+  return (
+    <aside className="aws-sidebar">
+      <div className="aws-sidebar-service-title">Amazon CloudWatch</div>
+      {CW_NAV.map(section => {
+        const isOpen = !collapsed[section.label];
+        return (
+          <div key={section.label} className="aws-sidebar-section">
+            <div className="aws-sidebar-section-header" onClick={() => toggle(section.label)}>
+              <span>{section.label}</span>
+              {isOpen ? <ChevronDown size={13}/> : <ChevronRight size={13}/>}
+            </div>
+            {isOpen && section.items.map(item => {
+              const isActive = pathname === item.path || pathname.startsWith(item.path + '/');
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`aws-sidebar-link${isActive ? ' active' : ''}`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        );
+      })}
+    </aside>
+  );
+}
+
+/* ── EC2 Sidebar ───────────────────────────────────────────────────── */
+const EC2_NAV = [
+  {
+    label: 'Instances',
+    items: [
+      { label: 'Instances', path: '/ec2' },
+    ],
+  },
+  {
+    label: 'Images',
+    items: [
+      { label: 'AMIs', path: '/ec2/amis' },
+    ],
+  },
+  {
+    label: 'Network & Security',
+    items: [
+      { label: 'Security Groups', path: '/ec2/security-groups' },
+      { label: 'Key Pairs', path: '/ec2/key-pairs' },
+    ],
+  },
+];
+
+function EC2Sidebar({ pathname }) {
+  const [collapsed, setCollapsed] = useState({});
+  const toggle = (label) => setCollapsed(prev => ({ ...prev, [label]: !prev[label] }));
+
+  return (
+    <aside className="aws-sidebar">
+      <div className="aws-sidebar-service-title">Amazon EC2</div>
+      {EC2_NAV.map(section => {
+        const isOpen = !collapsed[section.label];
+        return (
+          <div key={section.label} className="aws-sidebar-section">
+            <div className="aws-sidebar-section-header" onClick={() => toggle(section.label)}>
+              <span>{section.label}</span>
+              {isOpen ? <ChevronDown size={13}/> : <ChevronRight size={13}/>}
+            </div>
+            {isOpen && section.items.map(item => {
+              const isActive = item.path === '/ec2'
+                ? (pathname === '/ec2' || pathname.startsWith('/ec2/instance') || pathname === '/ec2/launch')
+                : pathname.startsWith(item.path);
+              return (
+                <Link key={item.path} to={item.path} className={`aws-sidebar-link${isActive ? ' active' : ''}`}>
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        );
+      })}
+    </aside>
+  );
+}
+
 /* ── Default sidebar (console home) ───────────────────────────────── */
 const HOME_SERVICES = [
   { label: 'S3', path: '/s3', color: '#3f8624' },
-  { label: 'EC2', path: '/', color: '#e07b00' },
-  { label: 'Lambda', path: '/', color: '#e07b00' },
+  { label: 'EC2', path: '/ec2', color: '#e07b00' },
+  { label: 'Lambda', path: '/lambda', color: '#e07b00' },
   { label: 'RDS', path: '/', color: '#3f8624' },
-  { label: 'CloudWatch', path: '/', color: '#e7157b' },
+  { label: 'CloudWatch', path: '/cloudwatch', color: '#e7157b' },
   { label: 'IAM', path: '/', color: '#dd344c' },
-  { label: 'DynamoDB', path: '/', color: '#527fff' },
+  { label: 'DynamoDB', path: '/dynamodb', color: '#527fff' },
 ];
 
 function DefaultSidebar({ pathname }) {
@@ -213,14 +334,17 @@ function DefaultSidebar({ pathname }) {
 
 /* ── Main Layout ───────────────────────────────────────────────────── */
 export default function AwsLayout() {
+  const { region, changeRegion } = useRegion();
+  const currentRegion = REGION_GROUPS.flatMap(g => g.regions).find(r => r.code === region) || { code: 'ap-south-1', label: 'Asia Pacific (Mumbai)' };
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [regionOpen, setRegionOpen] = useState(false);
-  const [currentRegion, setCurrentRegion] = useState({ code: 'ap-south-1', label: 'Asia Pacific (Mumbai)' });
   const regionRef = useRef();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const isInsideS3 = pathname.startsWith('/s3');
+  const isInsideCloudWatch = pathname.startsWith('/cloudwatch');
+  const isInsideEC2 = pathname.startsWith('/ec2');
 
   const allRegions = REGION_GROUPS.flatMap(g => g.regions);
 
@@ -235,11 +359,11 @@ export default function AwsLayout() {
 
   const services = [
     { name: 'S3', desc: 'Scalable Storage in the Cloud', path: '/s3', color: '#3f8624' },
-    { name: 'EC2', desc: 'Virtual Servers in the Cloud', path: '/', color: '#e07b00' },
-    { name: 'Lambda', desc: 'Run Code without Thinking about Servers', path: '/', color: '#e07b00' },
-    { name: 'DynamoDB', desc: 'Managed NoSQL Database', path: '/', color: '#527fff' },
+    { name: 'EC2', desc: 'Virtual Servers in the Cloud', path: '/ec2', color: '#e07b00' },
+    { name: 'Lambda', desc: 'Run Code without Thinking about Servers', path: '/lambda', color: '#e07b00' },
+    { name: 'DynamoDB', desc: 'Managed NoSQL Database', path: '/dynamodb', color: '#527fff' },
     { name: 'IAM', desc: 'Manage access to AWS resources', path: '/', color: '#dd344c' },
-    { name: 'CloudWatch', desc: 'Monitor Resources and Applications', path: '/', color: '#e7157b' },
+    { name: 'CloudWatch', desc: 'Monitor Resources and Applications', path: '/cloudwatch', color: '#e7157b' },
     { name: 'RDS', desc: 'Managed Relational Database Service', path: '/', color: '#3f8624' },
     { name: 'VPC', desc: 'Isolated Cloud Resources', path: '/', color: '#8c4fff' },
   ];
@@ -254,7 +378,7 @@ export default function AwsLayout() {
   };
 
   const favItems = ['S3', 'EC2', 'Lambda', 'RDS', 'CloudWatch', 'IAM'];
-  const favPaths = { S3: '/s3', EC2: '/', Lambda: '/', RDS: '/', CloudWatch: '/', IAM: '/' };
+  const favPaths = { S3: '/s3', EC2: '/ec2', Lambda: '/lambda', RDS: '/', CloudWatch: '/cloudwatch', IAM: '/', DynamoDB: '/dynamodb' };
 
   return (
     <div className="app-container">
@@ -347,7 +471,7 @@ export default function AwsLayout() {
                       <div
                         key={r.code}
                         className={`aws-region-item${r.code === currentRegion.code ? ' active' : ''}`}
-                        onClick={() => { setCurrentRegion(r); setRegionOpen(false); }}
+                        onClick={() => { changeRegion(r.code); setRegionOpen(false); }}
                       >
                         {r.code === currentRegion.code && (
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--aws-blue)" style={{ flexShrink: 0 }}>
@@ -394,7 +518,14 @@ export default function AwsLayout() {
 
       {/* ── Main layout ───────────────────────────────────────────── */}
       <div className="main-layout">
-        {isInsideS3 ? <S3Sidebar pathname={pathname}/> : <DefaultSidebar pathname={pathname}/>}
+        {isInsideS3
+          ? <S3Sidebar pathname={pathname}/>
+          : isInsideCloudWatch
+            ? <CloudWatchSidebar pathname={pathname}/>
+            : isInsideEC2
+              ? <EC2Sidebar pathname={pathname}/>
+              : <DefaultSidebar pathname={pathname}/>
+        }
         <main className="content-area" style={{ marginLeft: 'var(--sidebar-width)' }}>
           <Outlet/>
         </main>

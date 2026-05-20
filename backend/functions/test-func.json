@@ -1,0 +1,12 @@
+{
+  "functionName": "test-func",
+  "runtime": "nodejs20.x",
+  "handler": "index.handler",
+  "description": "",
+  "timeout": 3,
+  "memorySize": 128,
+  "envVars": {},
+  "code": "exports.handler = async (event) => {\r\n  console.log('Updated via CLI! Event:', JSON.stringify(event));\r\n  return {\r\n    statusCode: 200,\r\n    body: JSON.stringify({\r\n      message: 'This code was deployed via CLI',\r\n      input: event,\r\n    }),\r\n  };\r\n};",
+  "createdAt": "2026-05-18T07:43:13.911Z",
+  "lastModified": "2026-05-19T06:56:37.825Z"
+}
